@@ -1,4 +1,5 @@
 # RSAClient-iOS
+[![Build Status](https://travis-ci.org/tigi44/RSAClient-iOS.svg?branch=master)](https://travis-ci.org/tigi44/RSAClient-iOS)
 
 ## CLIENT
 - iOS
