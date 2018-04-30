@@ -15,10 +15,12 @@ static NSString * const kServerPrivateKeyString = @"MIIEvAIBADANBgkqhkiG9w0BAQEF
 static NSString *const kServerPublicKeyTag    = @"RSA_SERVER_PUBLICKEY";
 static NSString *const kServerPrivateKeyTag   = @"RSA_SERVER_PRIVATEKEY";
 
-static NSString *const kRSALabel         = @"RSALabel";
+static NSString *const kRSALabel              = @"RSALabel";
 
 static NSString *const kiOSPublicKeyTag       = @"RSA_IOS_PUBLICKEY";
 static NSString *const kiOSPrivateKeyTag      = @"RSA_IOS_PRIVATEKEY";
+
+static int       const kRSAKeySize            = 2048;
 
 @implementation RSAManager
 
@@ -26,26 +28,25 @@ static NSString *const kiOSPrivateKeyTag      = @"RSA_IOS_PRIVATEKEY";
 
 + (NSString *)encryptString:(NSString * _Nonnull)aPlanString publicKey:(NSString * _Nonnull)aPublicKeyString tag:(NSString *)aTag
 {
-    SecKeyRef   sPublicKeyRef;
-    NSData      *sPlainData;
-    NSData      *sCipherData;
+    SecKeyRef   sPublicKeyRef = NULL;
+    NSData     *sPlainData;
+    NSData     *sCipherData;
     
     if (!aPlanString || !aPublicKeyString)
     {
         return nil;
     }
     
-    if (!aTag)
+    sPublicKeyRef = [[self class] secPublicKeyFromString:aPublicKeyString tag:aTag];
+    if (!sPublicKeyRef)
     {
-        aTag = kServerPublicKeyTag;
+        return nil;
     }
     
-    sPublicKeyRef = [[self class] secPublicKeyFromString:aPublicKeyString tag:aTag];
+    sPlainData    = [aPlanString dataUsingEncoding:NSUTF8StringEncoding];
+    sCipherData   = [[self class] RSAEncryptData:sPlainData Key:sPublicKeyRef];
     
-    sPlainData = [aPlanString dataUsingEncoding:NSUTF8StringEncoding];
-    sCipherData = [[self class] RSAEncryptData:sPlainData Key:sPublicKeyRef];
-    
-    return base64_encode_data(sCipherData);
+    return base64EncodeWithData(sCipherData);
 }
 
 + (NSString *)serverKeyEncryptString:(NSString * _Nonnull)aPlanString
@@ -55,16 +56,20 @@ static NSString *const kiOSPrivateKeyTag      = @"RSA_IOS_PRIVATEKEY";
 
 + (NSString *)iOSKeyEncryptString:(NSString * _Nonnull)aPlanString
 {
-    SecKeyRef   sPublicKeyRef;
-    NSData      *sPlainData;
-    NSData      *sCipherData;
+    SecKeyRef   sPublicKeyRef = NULL;
+    NSData     *sPlainData;
+    NSData     *sCipherData;
     
     [[self class] secKeyRef:&sPublicKeyRef tag:kiOSPublicKeyTag];
+    if (!sPublicKeyRef)
+    {
+        return nil;
+    }
     
-    sPlainData = [aPlanString dataUsingEncoding:NSUTF8StringEncoding];
+    sPlainData  = [aPlanString dataUsingEncoding:NSUTF8StringEncoding];
     sCipherData = [[self class] RSAEncryptData:sPlainData Key:sPublicKeyRef];
     
-    return base64_encode_data(sCipherData);
+    return base64EncodeWithData(sCipherData);
 }
 
 
@@ -72,24 +77,23 @@ static NSString *const kiOSPrivateKeyTag      = @"RSA_IOS_PRIVATEKEY";
 
 + (NSString *)decryptString:(NSString * _Nonnull)aEncryptedString privateKey:(NSString * _Nonnull)aPrivateKeyString tag:(NSString *)aTag
 {
-    SecKeyRef   sPrivateKeyRef;
-    NSData      *sPlainData;
-    NSData      *sCipherData;
+    SecKeyRef   sPrivateKeyRef = NULL;
+    NSData     *sPlainData;
+    NSData     *sCipherData;
     
     if (!aEncryptedString || !aPrivateKeyString)
     {
         return nil;
     }
     
-    if (!aTag)
+    sPrivateKeyRef = [[self class] secPrivateKeyFromString:aPrivateKeyString tag:aTag];
+    if (!sPrivateKeyRef)
     {
-        aTag = kServerPrivateKeyTag;
+        return nil;
     }
     
-    sPrivateKeyRef = [[self class] secPrivateKeyFromString:aPrivateKeyString tag:aTag];
-    
-    sCipherData = base64_decode(aEncryptedString);
-    sPlainData = [[self class] RSADecryptData:sCipherData Key:sPrivateKeyRef];
+    sCipherData    = base64DecodeToData(aEncryptedString);
+    sPlainData     = [[self class] RSADecryptData:sCipherData Key:sPrivateKeyRef];
 
     return [[NSString alloc] initWithData:sPlainData encoding:NSUTF8StringEncoding];
 }
@@ -101,14 +105,18 @@ static NSString *const kiOSPrivateKeyTag      = @"RSA_IOS_PRIVATEKEY";
 
 + (NSString *)iOSKeyDecryptString:(NSString * _Nonnull)aEncryptedString
 {
-    SecKeyRef   sPrivateKeyRef;
-    NSData      *sPlainData;
-    NSData      *sCipherData;
+    SecKeyRef   sPrivateKeyRef = NULL;
+    NSData     *sPlainData;
+    NSData     *sCipherData;
     
     [[self class] secKeyRef:&sPrivateKeyRef tag:kiOSPrivateKeyTag];
+    if (!sPrivateKeyRef)
+    {
+        return nil;
+    }
     
-    sCipherData = base64_decode(aEncryptedString);
-    sPlainData = [[self class] RSADecryptData:sCipherData Key:sPrivateKeyRef];
+    sCipherData = base64DecodeToData(aEncryptedString);
+    sPlainData  = [[self class] RSADecryptData:sCipherData Key:sPrivateKeyRef];
     
     return [[NSString alloc] initWithData:sPlainData encoding:NSUTF8StringEncoding];
 }
@@ -119,34 +127,43 @@ static NSString *const kiOSPrivateKeyTag      = @"RSA_IOS_PRIVATEKEY";
 
 + (SecKeyRef)secPublicKeyFromString:(NSString *)aKey tag:(NSString *)aTag
 {
-    // delete
-    [[self class] SecItemDeleteByTag:aTag];
+    SecKeyRef sSecKeyRef = NULL;
     
-    // add
-    OSStatus status = [[self class] SecItemAddPublicKey:aKey tag:aTag];
-    if ((status != noErr) && (status != errSecDuplicateItem)) {
-        return nil;
+    if (@available(iOS 10.0, *))
+    {
+        sSecKeyRef = [[self class] SecKeyCreateWithPublicKey:aKey];
+    }
+    else
+    {
+        if (!aTag)
+        {
+            aTag = kServerPublicKeyTag;
+        }
+        
+        [[self class] SecItemDeleteByTag:aTag];
+        
+        OSStatus status = [[self class] SecItemAddPublicKey:aKey tag:aTag];
+        if ((status != noErr) && (status != errSecDuplicateItem)) {
+            return NULL;
+        }
+        
+        status = [[self class] secKeyRef:&sSecKeyRef tag:aTag];
+        if(status != noErr){
+            return NULL;
+        }
     }
     
-    // match
-    SecKeyRef sKeyRef = nil;
-    status = [[self class] secKeyRef:&sKeyRef tag:aTag];
-    
-    if(status != noErr){
-        return nil;
-    }
-    
-    return sKeyRef;
+    return sSecKeyRef;
 }
 
 + (OSStatus)SecItemDeleteByTag:(NSString *)aTag
 {
     NSMutableDictionary *sKeyDic = [[NSMutableDictionary alloc] init];
-    NSData *d_tag = [NSData dataWithBytes:[aTag UTF8String] length:[aTag length]];
+    NSData              *sTag    = [NSData dataWithBytes:[aTag UTF8String] length:[aTag length]];
     
     [sKeyDic setObject:(__bridge id)kSecClassKey             forKey:(__bridge id)kSecClass];
     [sKeyDic setObject:(__bridge id)kSecAttrKeyTypeRSA       forKey:(__bridge id)kSecAttrKeyType];
-    [sKeyDic setObject:d_tag                                  forKey:(__bridge id)kSecAttrApplicationTag];
+    [sKeyDic setObject:sTag                                  forKey:(__bridge id)kSecAttrApplicationTag];
     
     return SecItemDelete((__bridge CFDictionaryRef)sKeyDic);
 }
@@ -154,69 +171,120 @@ static NSString *const kiOSPrivateKeyTag      = @"RSA_IOS_PRIVATEKEY";
 + (OSStatus)SecItemAddPublicKey:(NSString *)aPublicKey tag:(NSString *)aTag
 {
     NSMutableDictionary *sPublicKeyDic = [[NSMutableDictionary alloc] init];
-    NSData *d_tag = [NSData dataWithBytes:[aTag UTF8String] length:[aTag length]];
-    NSData *sKeyData = base64_decode(aPublicKey);
+    NSData              *sTag          = [NSData dataWithBytes:[aTag UTF8String] length:[aTag length]];
+    NSData              *sKeyData      = base64DecodeToData(aPublicKey);
     
-    [sPublicKeyDic setObject:(__bridge id)kSecClassKey             forKey:(__bridge id)kSecClass];
-    [sPublicKeyDic setObject:(__bridge id)kSecAttrKeyTypeRSA       forKey:(__bridge id)kSecAttrKeyType];
-    [sPublicKeyDic setObject:d_tag                                  forKey:(__bridge id)kSecAttrApplicationTag];
+    [sPublicKeyDic setObject:(__bridge id)kSecClassKey              forKey:(__bridge id)kSecClass];
+    [sPublicKeyDic setObject:(__bridge id)kSecAttrKeyTypeRSA        forKey:(__bridge id)kSecAttrKeyType];
+    [sPublicKeyDic setObject:sTag                                   forKey:(__bridge id)kSecAttrApplicationTag];
     [sPublicKeyDic setObject:sKeyData                               forKey:(__bridge id)kSecValueData];
     [sPublicKeyDic setObject:(__bridge id) kSecAttrKeyClassPublic   forKey:(__bridge id)kSecAttrKeyClass];
     [sPublicKeyDic setObject:[NSNumber numberWithBool:YES]          forKey:(__bridge id)kSecReturnPersistentRef];
     
-    CFTypeRef persistKey = nil;
-    OSStatus sStatus = SecItemAdd((__bridge CFDictionaryRef)sPublicKeyDic, &persistKey);
-    if (persistKey != nil){
-        CFRelease(persistKey);
+    CFTypeRef sPersistKey = NULL;
+    OSStatus  sStatus     = SecItemAdd((__bridge CFDictionaryRef)sPublicKeyDic, &sPersistKey);
+    if (sPersistKey){
+        CFRelease(sPersistKey);
     }
     
     return sStatus;
+}
+
++ (SecKeyRef)SecKeyCreateWithPublicKey:(NSString *)aPublicKey
+{
+    NSData       *sKeyData = base64DecodeToData(aPublicKey);
+    NSDictionary *sOptions = @{
+                               (id)kSecAttrKeyType        : (id)kSecAttrKeyTypeRSA,
+                               (id)kSecAttrKeyClass       : (id)kSecAttrKeyClassPublic,
+                               (id)kSecAttrKeySizeInBits  : @(kRSAKeySize)
+                               };
+    
+    CFErrorRef sError = NULL;
+    SecKeyRef  sKey   = SecKeyCreateWithData((__bridge CFDataRef)sKeyData, (__bridge CFDictionaryRef)sOptions, &sError);
+    if (sError)
+    {
+        NSLog(@"SecKeyCreateWithPublicKey Error: %@", (__bridge NSError *)sError);
+        sKey = NULL;
+    }
+    
+    return sKey;
 }
 
 #pragma mark - get secKeyRef by a private key string
 
 + (SecKeyRef)secPrivateKeyFromString:(NSString *)aKey tag:(NSString *)aTag
 {
-    // delete
-    [[self class] SecItemDeleteByTag:aTag];
+    SecKeyRef sSecKeyRef = NULL;
     
-    // add
-    OSStatus status = [[self class] SecItemAddPrivateKey:aKey tag:aTag];
-    if ((status != noErr) && (status != errSecDuplicateItem)) {
-        return nil;
+    if (@available(iOS 10.0, *))
+    {
+        sSecKeyRef = [[self class] SecKeyCreateWithPrivateKey:aKey];
+    }
+    else
+    {
+        if (!aTag)
+        {
+            aTag = kServerPrivateKeyTag;
+        }
+        
+        [[self class] SecItemDeleteByTag:aTag];
+        
+        OSStatus status = [[self class] SecItemAddPrivateKey:aKey tag:aTag];
+        if ((status != noErr) && (status != errSecDuplicateItem)) {
+            sSecKeyRef = NULL;
+        }
+    
+        status = [[self class] secKeyRef:&sSecKeyRef tag:aTag];
+        if(status != noErr){
+            sSecKeyRef = NULL;
+        }
     }
     
-    // match
-    SecKeyRef sKeyRef = nil;
-    status = [[self class] secKeyRef:&sKeyRef tag:aTag];
-    if(status != noErr){
-        return nil;
-    }
-    
-    return sKeyRef;
+    return sSecKeyRef;
 }
 
 + (OSStatus)SecItemAddPrivateKey:(NSString *)aPrivateKey tag:(NSString *)aTag
 {
     NSMutableDictionary *sPrivateKeyDic = [[NSMutableDictionary alloc] init];
-    NSData *d_tag = [NSData dataWithBytes:[aTag UTF8String] length:[aTag length]];
-    NSData *sKeyData = base64_decode(aPrivateKey);
-    sKeyData = stripPrivateKeyHeader(sKeyData);
+    NSData              *sTag           = [NSData dataWithBytes:[aTag UTF8String] length:[aTag length]];
+    NSData              *sKeyData       = base64DecodeToData(aPrivateKey);
+                         sKeyData       = stripPrivateKeyHeader(sKeyData);
     
-    [sPrivateKeyDic setObject:(__bridge id)kSecClassKey             forKey:(__bridge id)kSecClass];
-    [sPrivateKeyDic setObject:(__bridge id)kSecAttrKeyTypeRSA       forKey:(__bridge id)kSecAttrKeyType];
-    [sPrivateKeyDic setObject:d_tag                                  forKey:(__bridge id)kSecAttrApplicationTag];
+    [sPrivateKeyDic setObject:(__bridge id)kSecClassKey              forKey:(__bridge id)kSecClass];
+    [sPrivateKeyDic setObject:(__bridge id)kSecAttrKeyTypeRSA        forKey:(__bridge id)kSecAttrKeyType];
+    [sPrivateKeyDic setObject:sTag                                   forKey:(__bridge id)kSecAttrApplicationTag];
     [sPrivateKeyDic setObject:sKeyData                               forKey:(__bridge id)kSecValueData];
     [sPrivateKeyDic setObject:(__bridge id)kSecAttrKeyClassPrivate   forKey:(__bridge id)kSecAttrKeyClass];
     [sPrivateKeyDic setObject:[NSNumber numberWithBool:YES]          forKey:(__bridge id)kSecReturnPersistentRef];
     
-    CFTypeRef persistKey = nil;
-    OSStatus sStatus = SecItemAdd((__bridge CFDictionaryRef)sPrivateKeyDic, &persistKey);
-    if (persistKey != nil){
-        CFRelease(persistKey);
+    CFTypeRef sPersistKey = NULL;
+    OSStatus  sStatus     = SecItemAdd((__bridge CFDictionaryRef)sPrivateKeyDic, &sPersistKey);
+    if (sPersistKey){
+        CFRelease(sPersistKey);
     }
     
     return sStatus;
+}
+
++ (SecKeyRef)SecKeyCreateWithPrivateKey:(NSString *)aPrivateKey
+{
+    NSData       *sKeyData = base64DecodeToData(aPrivateKey);
+                  sKeyData = stripPrivateKeyHeader(sKeyData);
+    NSDictionary *sOptions = @{
+                               (id)kSecAttrKeyType        : (id)kSecAttrKeyTypeRSA,
+                               (id)kSecAttrKeyClass       : (id)kSecAttrKeyClassPrivate,
+                               (id)kSecAttrKeySizeInBits  : @(kRSAKeySize)
+                               };
+    
+    CFErrorRef sError = NULL;
+    SecKeyRef  sKey   = SecKeyCreateWithData((__bridge CFDataRef)sKeyData, (__bridge CFDictionaryRef)sOptions, &sError);
+    if (sError)
+    {
+        NSLog(@"SecKeyCreateWithPrivateKey Error: %@", (__bridge NSError *)sError);
+        sKey = NULL;
+    }
+    
+    return sKey;
 }
 
 #pragma mark - remove all keys
@@ -230,7 +298,7 @@ static NSString *const kiOSPrivateKeyTag      = @"RSA_IOS_PRIVATEKEY";
     [sQueryDict setObject:(id)kSecClassKey          forKey:(id)kSecClass];
     [sQueryDict setObject:(id)kSecAttrKeyTypeRSA    forKey:(id)kSecAttrKeyType];
     [sQueryDict setObject:@(YES)                    forKey:(id)kSecReturnAttributes];
-    [sQueryDict setObject:kRSALabel            forKey:(id)kSecAttrLabel];
+    [sQueryDict setObject:kRSALabel                 forKey:(id)kSecAttrLabel];
     [sQueryDict setObject:(id)kSecMatchLimitAll     forKey:(id)kSecMatchLimit];
     
     sSearchResult = SecItemCopyMatching((__bridge CFDictionaryRef)sQueryDict, (CFTypeRef *)&sArray);
@@ -249,7 +317,7 @@ static NSString *const kiOSPrivateKeyTag      = @"RSA_IOS_PRIVATEKEY";
         }
     }
     
-    if (sArray != nil)
+    if (sArray)
     {
         CFRelease(sArray);
     }
@@ -257,59 +325,59 @@ static NSString *const kiOSPrivateKeyTag      = @"RSA_IOS_PRIVATEKEY";
 
 #pragma mark - generate key on iOS
 
-+ (OSStatus)generateKeyPairWithPublicKey:(SecKeyRef *)  aPublicKeyRef
-                            publicKeyTag:(NSString *)   aPublicKeyTag
-                              privateKey:(SecKeyRef *)  aPrivateKeyRef
-                           privateKeyTag:(NSString *)   aPrivateKeyTag
++ (OSStatus)generateKeyPairForPublicSecKeyRef:(SecKeyRef *)  aPublicKeyRef
+                                 publicKeyTag:(NSString *)   aPublicKeyTag
+                             privateSecKeyRef:(SecKeyRef *)  aPrivateKeyRef
+                                privateKeyTag:(NSString *)   aPrivateKeyTag
 {
     NSMutableDictionary *sPublicKeyAttrs  = [NSMutableDictionary dictionary];
     NSMutableDictionary *sPrivateKeyAttrs = [NSMutableDictionary dictionary];
     NSMutableDictionary *sKeyPairAttrs    = [NSMutableDictionary dictionary];
     
-    NSData *sPublicTag  = [aPublicKeyTag  dataUsingEncoding:NSUTF8StringEncoding];
-    NSData *sPrivateTag = [aPrivateKeyTag dataUsingEncoding:NSUTF8StringEncoding];
+    NSData              *sPublicTag       = [aPublicKeyTag  dataUsingEncoding:NSUTF8StringEncoding];
+    NSData              *sPrivateTag      = [aPrivateKeyTag dataUsingEncoding:NSUTF8StringEncoding];
     
-    [sPublicKeyAttrs  setObject:sPublicTag   forKey:(id)kSecAttrApplicationTag];
-    [sPrivateKeyAttrs setObject:sPrivateTag  forKey:(id)kSecAttrApplicationTag];
+    [sPublicKeyAttrs  setObject:sPublicTag             forKey:(id)kSecAttrApplicationTag];
+    [sPrivateKeyAttrs setObject:sPrivateTag            forKey:(id)kSecAttrApplicationTag];
     
-    [sKeyPairAttrs setObject:(id)kSecAttrKeyTypeRSA forKey:(id)kSecAttrKeyType];
-    [sKeyPairAttrs setObject:@(2048)                forKey:(id)kSecAttrKeySizeInBits];
-    [sKeyPairAttrs setObject:@(YES)                 forKey:(id)kSecAttrIsPermanent];
-    [sKeyPairAttrs setObject:kRSALabel         forKey:(id)kSecAttrLabel];
-    [sKeyPairAttrs setObject:sPublicKeyAttrs        forKey:(id)kSecPublicKeyAttrs];
-    [sKeyPairAttrs setObject:sPrivateKeyAttrs       forKey:(id)kSecPrivateKeyAttrs];
+    [sKeyPairAttrs    setObject:(id)kSecAttrKeyTypeRSA forKey:(id)kSecAttrKeyType];
+    [sKeyPairAttrs    setObject:@(kRSAKeySize)         forKey:(id)kSecAttrKeySizeInBits];
+    [sKeyPairAttrs    setObject:@(YES)                 forKey:(id)kSecAttrIsPermanent];
+    [sKeyPairAttrs    setObject:kRSALabel              forKey:(id)kSecAttrLabel];
+    [sKeyPairAttrs    setObject:sPublicKeyAttrs        forKey:(id)kSecPublicKeyAttrs];
+    [sKeyPairAttrs    setObject:sPrivateKeyAttrs       forKey:(id)kSecPrivateKeyAttrs];
     
     return SecKeyGeneratePair((__bridge CFDictionaryRef)sKeyPairAttrs, aPublicKeyRef, aPrivateKeyRef);
 }
 
-+ (OSStatus)generateKeyPairWithPublicKey:(SecKeyRef *)aPublicKeyRef privateKey:(SecKeyRef *)aPrivateKeyRef
++ (OSStatus)generateKeyPairForPublicSecKeyRef:(SecKeyRef *)aPublicKeyRef privateSecKeyRef:(SecKeyRef *)aPrivateKeyRef
 {
-    return [[self class] generateKeyPairWithPublicKey:aPublicKeyRef publicKeyTag:kiOSPublicKeyTag privateKey:aPrivateKeyRef privateKeyTag:kiOSPrivateKeyTag];
+    return [[self class] generateKeyPairForPublicSecKeyRef:aPublicKeyRef publicKeyTag:kiOSPublicKeyTag privateSecKeyRef:aPrivateKeyRef privateKeyTag:kiOSPrivateKeyTag];
 }
 
-+ (OSStatus)generateKeyPairWithPublicKey
++ (OSStatus)generateKeyPair
 {
-    return [[self class] generateKeyPairWithPublicKey:nil privateKey:nil];
+    return [[self class] generateKeyPairForPublicSecKeyRef:nil privateSecKeyRef:nil];
 }
 
 #pragma mark - get a key by a tag
 
 + (NSString *)iOSPublicKeyStringForServer
 {
-    SecKeyRef sPublicKeyRef = nil;
+    SecKeyRef sPublicKeyRef = NULL;
     NSData   *sPublicKeyData;
     NSString *sPublicKeyString;
     
     [[self class] secKeyRef:&sPublicKeyRef tag:kiOSPublicKeyTag];
     
-    if (sPublicKeyRef == nil)
+    if (!sPublicKeyRef)
     {
         [[self class] removeAllRSAKeys];
-        [[self class] generateKeyPairWithPublicKey:&sPublicKeyRef privateKey:nil];
+        [[self class] generateKeyPairForPublicSecKeyRef:&sPublicKeyRef privateSecKeyRef:nil];
     }
     
-    sPublicKeyData = [[self class] dataFromKey:sPublicKeyRef];
-    sPublicKeyString  = base64_encode_data(sPublicKeyData);
+    sPublicKeyData    = [[self class] dataFromKey:sPublicKeyRef];
+    sPublicKeyString  = base64EncodeWithData(sPublicKeyData);
     
     return convertPublicKeyForServer(sPublicKeyString);
 }
@@ -339,16 +407,16 @@ static NSString *const kiOSPrivateKeyTag      = @"RSA_IOS_PRIVATEKEY";
 
 + (NSData *)RSAEncryptData:(NSData *)aData Key:(SecKeyRef)aKey
 {
-    NSData   *sEncryptData  = nil;
-    size_t   sBufferLength  = SecKeyGetBlockSize(aKey);
-    uint8_t  *sBuffer       = malloc(sBufferLength);
+    NSData   *sEncryptData   = nil;
+    size_t    sBufferLength  = SecKeyGetBlockSize(aKey);
+    uint8_t  *sBuffer        = malloc(sBufferLength);
     
-    OSStatus sResult = SecKeyEncrypt(aKey,
-                                     kSecPaddingPKCS1,
-                                     aData.bytes,
-                                     aData.length,
-                                     sBuffer,
-                                     &sBufferLength);
+    OSStatus  sResult        = SecKeyEncrypt(aKey,
+                                             kSecPaddingPKCS1,
+                                             aData.bytes,
+                                             aData.length,
+                                             sBuffer,
+                                             &sBufferLength);
     
     if (sResult == errSecSuccess)
     {
@@ -360,16 +428,16 @@ static NSString *const kiOSPrivateKeyTag      = @"RSA_IOS_PRIVATEKEY";
 
 + (NSData *)RSADecryptData:(NSData *)aData Key:(SecKeyRef)aKey
 {
-    NSData   *sDecryptData  = nil;
-    size_t   sBufferLength  = SecKeyGetBlockSize(aKey);
-    uint8_t  *sBuffer       = malloc(sBufferLength);
+    NSData   *sDecryptData   = nil;
+    size_t    sBufferLength  = SecKeyGetBlockSize(aKey);
+    uint8_t  *sBuffer        = malloc(sBufferLength);
     
-    OSStatus sResult = SecKeyDecrypt(aKey,
-                                     kSecPaddingPKCS1,
-                                     aData.bytes,
-                                     aData.length,
-                                     sBuffer,
-                                     &sBufferLength);
+    OSStatus  sResult        = SecKeyDecrypt(aKey,
+                                             kSecPaddingPKCS1,
+                                             aData.bytes,
+                                             aData.length,
+                                             sBuffer,
+                                             &sBufferLength);
     
     if (sResult == errSecSuccess)
     {
@@ -434,7 +502,7 @@ NSString *convertPublicKeyForServer(NSString *aPublicKeyOniOS)
         
     };
     
-    NSData *publicKeyBits = base64_decode(aPublicKeyOniOS);
+    NSData *publicKeyBits = base64DecodeToData(aPublicKeyOniOS);
     
     // OK - that gives us the "BITSTRING component of a full DER
     // encoded RSA public key - we now need to build the rest
@@ -472,7 +540,7 @@ NSString *convertPublicKeyForServer(NSString *aPublicKeyOniOS)
     [encKey appendData:publicKeyBits];
     
     // Now translate the result to a Base64 string
-    NSString * ret = base64_encode_data(encKey);
+    NSString * ret = base64EncodeWithData(encKey);
     
     return ret;
 }
@@ -495,13 +563,13 @@ size_t encodeLength(unsigned char * buf, size_t length) {
 
 #pragma mark - base64
 
-NSString *base64_encode_data(NSData *data){
+NSString *base64EncodeWithData(NSData *data){
     data = [data base64EncodedDataWithOptions:0];
     NSString *ret = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
     return ret;
 }
 
-NSData *base64_decode(NSString *str){
+NSData *base64DecodeToData(NSString *str){
     NSData *data = [[NSData alloc] initWithBase64EncodedString:str options:NSDataBase64DecodingIgnoreUnknownCharacters];
     return data;
 }

@@ -12,7 +12,7 @@
 
 #pragma mark -
 
-+ (OSStatus)generateKeyPairWithPublicKey;
++ (OSStatus)generateKeyPair;
 + (void)removeAllRSAKeys;
 
 + (NSString *)iOSPublicKeyStringForServer;
@@ -28,6 +28,7 @@
 + (NSString *)iOSKeyDecryptString:(nonnull NSString *)aEncryptedString;
 
 #pragma mark -
+
 + (NSData *)RSAEncryptData:(NSData *)aData Key:(SecKeyRef)aKey;
 + (NSData *)RSADecryptData:(NSData *)aData Key:(SecKeyRef)aKey;
 

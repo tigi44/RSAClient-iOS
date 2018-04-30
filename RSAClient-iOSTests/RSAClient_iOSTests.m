@@ -10,8 +10,9 @@
 #import "AFHTTPSessionManager.h"
 #import "RSAManager.h"
 
-static NSString *const      kPlainText          = @"TEST PLAIN TEXT";
-static NSTimeInterval const kTestBlockTimeout   = 2000;
+static NSString       *const      kPlainText          = @"TEST PLAIN TEXT";
+static NSTimeInterval  const      kTestBlockTimeout   = 2000;
+static NSString       *const      kLocalHost          = @"http://localhost:8080";
 
 @interface RSAClient_iOSTests : XCTestCase
 
@@ -31,7 +32,30 @@ static NSTimeInterval const kTestBlockTimeout   = 2000;
     [super tearDown];
 }
 
-- (void)testRSA {
+- (void)testSendRequestForGeneratingKey {
+    NSString *description = [NSString stringWithFormat:@"%s", __FUNCTION__];
+    XCTestExpectation *expectation = [self expectationWithDescription:description];
+    
+    AFHTTPSessionManager *manager = [AFHTTPSessionManager manager];
+    manager.requestSerializer = [AFHTTPRequestSerializer serializer];
+    manager.responseSerializer = [AFHTTPResponseSerializer serializer];
+    [manager GET:[NSString stringWithFormat:@"%@/generateKey", kLocalHost] parameters:nil progress:nil success:^(NSURLSessionTask *task, id responseObject) {
+        NSString *sResultString = [NSString stringWithUTF8String:[responseObject bytes]];
+        NSLog(@"%@", sResultString);
+        XCTAssertNotNil(sResultString, @"sResultString must be not nil");
+        [expectation fulfill];
+    } failure:^(NSURLSessionTask *operation, NSError *error) {
+        NSLog(@"Error: %@", error);
+        [expectation fulfill];
+        XCTFail(@"API ERROR : generateKey");
+    }];
+    
+    [self waitForExpectationsWithTimeout:kTestBlockTimeout handler:^(NSError *aError) {
+        XCTAssertNil(aError, @"Timeout Error : %@", aError);
+    }];
+}
+
+- (void)testRSAByEmbededServerKeys {
     NSString *sEncryptedString = [RSAManager serverKeyEncryptString:kPlainText];
     NSLog(@"Enctypted with public key : %@", sEncryptedString);
     XCTAssertNotNil(sEncryptedString, @"sEncryptedString must be not nil");
@@ -51,7 +75,7 @@ static NSTimeInterval const kTestBlockTimeout   = 2000;
     AFHTTPSessionManager *manager = [AFHTTPSessionManager manager];
     manager.requestSerializer = [AFHTTPRequestSerializer serializer];
     manager.responseSerializer = [AFHTTPResponseSerializer serializer];
-    [manager GET:@"http://localhost:8080/getPublicKey" parameters:nil progress:nil success:^(NSURLSessionTask *task, id responseObject) {
+    [manager GET:[NSString stringWithFormat:@"%@/getPublicKey", kLocalHost] parameters:nil progress:nil success:^(NSURLSessionTask *task, id responseObject) {
         NSString *sPublicKeyString = [NSString stringWithUTF8String:[responseObject bytes]];
         NSLog(@"******** Public key from JAVA ********");
         NSLog(@"-----BEGIN PUBLIC KEY-----");
@@ -71,7 +95,7 @@ static NSTimeInterval const kTestBlockTimeout   = 2000;
         NSDictionary *sParamDic = @{
                                     @"encryptText" : sEncryptedString
                                     };
-        [manager POST:@"http://localhost:8080/decryptByPrivateKey" parameters:sParamDic progress:nil success:^(NSURLSessionTask *task, id responseObject) {
+        [manager POST:[NSString stringWithFormat:@"%@/decryptByPrivateKey", kLocalHost] parameters:sParamDic progress:nil success:^(NSURLSessionTask *task, id responseObject) {
             NSString *sDecryptText = [NSString stringWithUTF8String:[responseObject bytes]];
             NSLog(@"******** Decrypted with private key from JAVA : %@ ********", sDecryptText);
             XCTAssert([sDecryptText isEqualToString:kPlainText], @"sDecryptText must be equaled with sPlanText");
@@ -94,9 +118,9 @@ static NSTimeInterval const kTestBlockTimeout   = 2000;
     }];
 }
 
-- (void)testRSAByiOSKeys {
+- (void)testRSAByGeneratediOSKeys {
 //    [RSAManager removeAllRSAKeys];
-    [RSAManager generateKeyPairWithPublicKey];
+    [RSAManager generateKeyPair];
 
     NSString *sEncryptedString = [RSAManager iOSKeyEncryptString:kPlainText];
     NSLog(@"Enctypted with public key : %@", sEncryptedString);
@@ -110,7 +134,7 @@ static NSTimeInterval const kTestBlockTimeout   = 2000;
 
 - (void)testDecryptionByiOSPrivateKey
 {
-    [RSAManager generateKeyPairWithPublicKey];
+    [RSAManager generateKeyPair];
     
     NSString *description = [NSString stringWithFormat:@"%s", __FUNCTION__];
     XCTestExpectation *expectation = [self expectationWithDescription:description];
@@ -129,7 +153,7 @@ static NSTimeInterval const kTestBlockTimeout   = 2000;
                                 @"plainText" : kPlainText,
                                 @"publicKey" : siOSPublicKeyString
                                 };
-    [manager POST:@"http://localhost:8080/encryptWithPublicKeyParam" parameters:sParamDic progress:nil success:^(NSURLSessionTask *task, id responseObject) {
+    [manager POST:[NSString stringWithFormat:@"%@/encryptWithPublicKeyParam", kLocalHost] parameters:sParamDic progress:nil success:^(NSURLSessionTask *task, id responseObject) {
         NSString *sEncryptedString = [NSString stringWithUTF8String:[responseObject bytes]];
         NSLog(@"******** Enctypted with public key from java ********");
         NSLog(@"%@", sEncryptedString);
