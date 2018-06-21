@@ -8,10 +8,6 @@
 
 #import "RSAManager.h"
 
-static NSString * const kServerPublicKeyString = @"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAhHOx/thUgKvWp5/cyE6HXbfYBqSVDArBA/NCmY6SsrdWcAc1aXUh2Ho/H3jpQSvkqfqGrfykcNP4Z/WjsLMp3Iyw+dXnOuIZbezuAuB0DIZLMLGlu42HPKQIrE+AaxF7ISLVQrc9LVjzjjNtj+SeYKxP+3+1DNk4jBTP1IraN//zaxND2Kz3iQUJszIXZNeVPG+mUqBqxsJBV0Ejp7BqaziCpnF/4CqSC11+D6Inm0ItwUa5lQZhViSr4689fhYt3Hy7LSsBAJ4Rcv+4HQRM9R4IIE1KBTYUhHTO7SSM8U06PyAwWfUJ9WVoPYqtHgP4BludRk6iTS2Yzwo9FeeWbQIDAQAB";
-static NSString * const kServerPrivateKeyString = @"MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCEc7H+2FSAq9ann9zIToddt9gGpJUMCsED80KZjpKyt1ZwBzVpdSHYej8feOlBK+Sp+oat/KRw0/hn9aOwsyncjLD51ec64hlt7O4C4HQMhkswsaW7jYc8pAisT4BrEXshItVCtz0tWPOOM22P5J5grE/7f7UM2TiMFM/Uito3//NrE0PYrPeJBQmzMhdk15U8b6ZSoGrGwkFXQSOnsGprOIKmcX/gKpILXX4PoiebQi3BRrmVBmFWJKvjrz1+Fi3cfLstKwEAnhFy/7gdBEz1HgggTUoFNhSEdM7tJIzxTTo/IDBZ9Qn1ZWg9iq0eA/gGW51GTqJNLZjPCj0V55ZtAgMBAAECggEADD/a7VO6dO/veS8qrwe8Mymme+7KrgNsmF3uAd+Sp56XCuNPyEIB8FBV+CYphFJ34lR+Eic0Wg7wgUTRb60SKQiF8YUbznFMosLvvCpf8SyWVZmIV1Eeebg96RmtKbnDJmxfRr1FliUM2VDeSBl/oDcvanYEG30XYrUmB2UUC2upWnAzYo1h3zDkZBKR2mAr7IiUTGnFZjdG+yG6x0dSoE+KGR47F9QqZ+ofUxCJmHH4NcKJ0G6tsf9TN8Dtum/Am3TMp5THq1ZwQ7K+T9LBP4z9SGA9MOpmAMwUKk4ve/3UBDro3ENQqePFgRB0Pn/3MqAGGN9rNH6ohyLC+/IyLQKBgQC6dMwq3yXaotd/D0yxvV2ZcIu2k+b7Nav0CvudXkKp375wWr+KwpLcveS7JxdMp4DZqiW6pwi/BXw1oBx1zIM85D37MxpXfNDrb8IwiB+giPycdTqyoEFx3Byy67FSOcLcvvYp0H2rp+zVKIiA1X1nN6+EfrXpB+Nfp/ss6HWEcwKBgQC12nZThqb77gtDN/B3ZWqYuGXSunSY1UWOnyc+hn/gPP427gqP9HFN/KZIdGVSGqyP87PUm/H4npW95R/qppJuvlIXAwBDdvTpGctyRSWBM2VYWbOeOvJmdhQRF5wfuEmdfNSeNCO94HsB9jgjoGmaigcAyxSaMAzk0D/B92qhnwKBgEpS/H+qa+B3QQd5Bc1j+seLQWYKFuzUPDMPnbThOhmVAsiuo+OgJAKx/1dLAdKggpBBbsC0jJv4h8aoiC+80iOXp81WVY3CR1VSO0o1OMY5VNjZMgi6MNw+LYJ0yT5JoA92X5HTdgTS72kYuzD/6PkYDXL3P3QgnNYok8sW7qFZAoGAEWjCnyhq3/9f8KVwTd3VoJ02kj/rXZ49NHQkC6ZQo6TzKUsMk89w8WhYeuM5t+x5zKYl9xqexZBZAX7n2UztA9EQhsdwxQSkWZRwl5XrCz1iXFzqByHZhtmS/jfmaFr6ISuMJ0ESkuDkpcFuimqW8YZ5OSg35rLm6RjOocEP4j0CgYBWByb6sgiOLQzc2JU+Is4Lm5NxDhpfqT0D+A52uCfTX4GuqPGrgHgcOEivAuc/161o3kpiqowpkh4O/uWgdiFej7nlJRRBr5DetzZvHKCe+datr6Ywmd5jwRlIX7FEHoyQE4GFPpQ1xdMUqoH39ntPUoc2+d9cyLLpTiESYgnCzA==";
-
-
 static NSString *const kServerPublicKeyTag    = @"RSA_SERVER_PUBLICKEY";
 static NSString *const kServerPrivateKeyTag   = @"RSA_SERVER_PRIVATEKEY";
 
@@ -49,18 +45,13 @@ static int       const kRSAKeySize            = 2048;
     return base64EncodeWithData(sCipherData);
 }
 
-+ (NSString *)serverKeyEncryptString:(NSString * _Nonnull)aPlanString
-{
-    return [[self class] encryptString:aPlanString publicKey:kServerPublicKeyString tag:kServerPublicKeyTag];
-}
-
-+ (NSString *)iOSKeyEncryptString:(NSString * _Nonnull)aPlanString
++ (NSString *)iOSKeyEncryptString:(NSString * _Nonnull)aPlanString tag:(NSString * _Nonnull)aPublicKeyTag
 {
     SecKeyRef   sPublicKeyRef = NULL;
     NSData     *sPlainData;
     NSData     *sCipherData;
     
-    [[self class] secKeyRef:&sPublicKeyRef tag:kiOSPublicKeyTag];
+    [[self class] secKeyRef:&sPublicKeyRef tag:aPublicKeyTag];
     if (!sPublicKeyRef)
     {
         return nil;
@@ -70,6 +61,11 @@ static int       const kRSAKeySize            = 2048;
     sCipherData = [[self class] RSAEncryptData:sPlainData Key:sPublicKeyRef];
     
     return base64EncodeWithData(sCipherData);
+}
+
++ (NSString *)iOSKeyEncryptString:(NSString * _Nonnull)aPlanString
+{
+    return [[self class] iOSKeyEncryptString:aPlanString tag:kiOSPublicKeyTag];
 }
 
 
@@ -98,18 +94,13 @@ static int       const kRSAKeySize            = 2048;
     return [[NSString alloc] initWithData:sPlainData encoding:NSUTF8StringEncoding];
 }
 
-+ (NSString *)serverKeyDecryptString:(NSString * _Nonnull)aEncryptedString
-{
-    return [[self class] decryptString:aEncryptedString privateKey:kServerPrivateKeyString tag:kServerPrivateKeyTag];
-}
-
-+ (NSString *)iOSKeyDecryptString:(NSString * _Nonnull)aEncryptedString
++ (NSString *)iOSKeyDecryptString:(nonnull NSString *)aEncryptedString tag:(nonnull NSString *)aPrivateKeyTag
 {
     SecKeyRef   sPrivateKeyRef = NULL;
     NSData     *sPlainData;
     NSData     *sCipherData;
     
-    [[self class] secKeyRef:&sPrivateKeyRef tag:kiOSPrivateKeyTag];
+    [[self class] secKeyRef:&sPrivateKeyRef tag:aPrivateKeyTag];
     if (!sPrivateKeyRef)
     {
         return nil;
@@ -119,6 +110,11 @@ static int       const kRSAKeySize            = 2048;
     sPlainData  = [[self class] RSADecryptData:sCipherData Key:sPrivateKeyRef];
     
     return [[NSString alloc] initWithData:sPlainData encoding:NSUTF8StringEncoding];
+}
+
++ (NSString *)iOSKeyDecryptString:(NSString * _Nonnull)aEncryptedString
+{
+    return [[self class] iOSKeyDecryptString:aEncryptedString tag:kiOSPrivateKeyTag];
 }
 
 
@@ -360,15 +356,20 @@ static int       const kRSAKeySize            = 2048;
     return [[self class] generateKeyPairForPublicSecKeyRef:nil privateSecKeyRef:nil];
 }
 
++ (OSStatus)generateKeyPairWithPublicKeyTag:(NSString * _Nonnull)aPublicKeyTag privateKeyTag:(NSString * _Nonnull)aPrivateKeyTag
+{
+    return [[self class] generateKeyPairForPublicSecKeyRef:nil publicKeyTag:aPublicKeyTag privateSecKeyRef:nil privateKeyTag:aPrivateKeyTag];
+}
+
 #pragma mark - get a key by a tag
 
-+ (NSString *)iOSPublicKeyStringForServer
++ (NSString *)iOSPublicKeyStringForServerByTag:(nonnull NSString *)aPublicKeyTag
 {
     SecKeyRef sPublicKeyRef = NULL;
     NSData   *sPublicKeyData;
     NSString *sPublicKeyString;
     
-    [[self class] secKeyRef:&sPublicKeyRef tag:kiOSPublicKeyTag];
+    [[self class] secKeyRef:&sPublicKeyRef tag:aPublicKeyTag];
     
     if (!sPublicKeyRef)
     {
@@ -380,6 +381,11 @@ static int       const kRSAKeySize            = 2048;
     sPublicKeyString  = base64EncodeWithData(sPublicKeyData);
     
     return convertPublicKeyForServer(sPublicKeyString);
+}
+
++ (NSString *)iOSPublicKeyStringForServer
+{
+    return [[self class] iOSPublicKeyStringForServerByTag:kiOSPublicKeyTag];
 }
 
 + (OSStatus)secKeyRef:(SecKeyRef *)aKeyRef tag:(NSString *)aTag
