@@ -26,8 +26,8 @@
 #pragma mark - External publicKey/privateKey
 
 
-+ (NSString *)encryptString:(nonnull NSString *)aPlanString publicKey:(nonnull NSString *)aPublicKeyString tag:(nullable NSString *)aPublicKeyTag;
-+ (NSString *)decryptString:(nonnull NSString *)aEncryptedString privateKey:(nonnull NSString *)aPrivateKeyString tag:(nullable NSString *)aPrivateKeyTag;
++ (NSString *)encryptString:(nonnull NSString *)aPlanString publicKey:(nonnull NSString *)aPublicKeyString;
++ (NSString *)decryptString:(nonnull NSString *)aEncryptedString privateKey:(nonnull NSString *)aPrivateKeyString;
 
 
 #pragma mark - iOS publicKey Encrypt

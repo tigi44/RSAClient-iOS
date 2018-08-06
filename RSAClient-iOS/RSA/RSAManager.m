@@ -46,12 +46,12 @@ static int       const kRSAKeySize               = 2048;
     return sEncryptResult;
 }
 
-+ (NSString *)encryptString:(NSString * _Nonnull)aPlanString publicKey:(NSString * _Nonnull)aPublicKeyString tag:(NSString *)aPublicKeyTag
++ (NSString *)encryptString:(NSString * _Nonnull)aPlanString publicKey:(NSString * _Nonnull)aPublicKeyString
 {
     SecKeyRef sPublicKeyRef  = NULL;
     NSString *sEncryptResult = nil;
     
-    sPublicKeyRef = [[self class] secExternalPublicKeyFromString:aPublicKeyString tag:aPublicKeyTag];
+    sPublicKeyRef = [[self class] secExternalPublicKeyFromString:aPublicKeyString];
     if (sPublicKeyRef)
     {
         sEncryptResult = [[self class] encryptString:aPlanString secKeyRef:sPublicKeyRef];
@@ -96,12 +96,12 @@ static int       const kRSAKeySize               = 2048;
     return sDecryptResult;
 }
 
-+ (NSString *)decryptString:(NSString * _Nonnull)aEncryptedString privateKey:(NSString * _Nonnull)aPrivateKeyString tag:(NSString *)aPrivateKeyTag
++ (NSString *)decryptString:(NSString * _Nonnull)aEncryptedString privateKey:(NSString * _Nonnull)aPrivateKeyString
 {
     SecKeyRef sPrivateKeyRef = NULL;
     NSString *sDecryptResult = nil;
 
-    sPrivateKeyRef = [[self class] secExternalPrivateKeyFromString:aPrivateKeyString tag:aPrivateKeyTag];
+    sPrivateKeyRef = [[self class] secExternalPrivateKeyFromString:aPrivateKeyString];
     if (sPrivateKeyRef)
     {
         sDecryptResult = [[self class] decryptString:aEncryptedString secKeyRef:sPrivateKeyRef];
@@ -127,7 +127,7 @@ static int       const kRSAKeySize               = 2048;
 #pragma mark - get secKeyRef by a External public key string
 
 
-+ (SecKeyRef)secExternalPublicKeyFromString:(NSString * _Nonnull)aExternalPublicKey tag:(NSString *)aTag
++ (SecKeyRef)secExternalPublicKeyFromString:(NSString * _Nonnull)aExternalPublicKey
 {
     SecKeyRef sSecKeyRef = NULL;
     
@@ -137,24 +137,20 @@ static int       const kRSAKeySize               = 2048;
     }
     else
     {
-        OSStatus status = noErr;
+        OSStatus  status = noErr;
+        NSString *sTag   = kExternalPublicKeyTag;
         
-        if (!aTag)
-        {
-            aTag = kExternalPublicKeyTag;
-        }
-        
-        status = [[self class] SecItemAddPublicKey:aExternalPublicKey tag:aTag];
+        status = [[self class] SecItemAddPublicKey:aExternalPublicKey tag:sTag];
         if ((status != errSecSuccess) && (status != errSecDuplicateItem)) {
             sSecKeyRef = NULL;
         }
         
-        status = [[self class] secKeyRef:&sSecKeyRef tag:aTag];
+        status = [[self class] secKeyRef:&sSecKeyRef tag:sTag];
         if(status != errSecSuccess){
             sSecKeyRef = NULL;
         }
         
-        status = [[self class] SecItemDeleteByTag:aTag];
+        status = [[self class] SecItemDeleteByTag:sTag];
     }
     
     return sSecKeyRef;
@@ -222,7 +218,7 @@ static int       const kRSAKeySize               = 2048;
 
 #pragma mark - get secKeyRef by a External private key string
 
-+ (SecKeyRef)secExternalPrivateKeyFromString:(NSString * _Nonnull)aExternalPrivateKey tag:(NSString *)aTag
++ (SecKeyRef)secExternalPrivateKeyFromString:(NSString * _Nonnull)aExternalPrivateKey
 {
     SecKeyRef sSecKeyRef = NULL;
     
@@ -232,24 +228,20 @@ static int       const kRSAKeySize               = 2048;
     }
     else
     {
-        OSStatus status = noErr;
+        OSStatus  status = noErr;
+        NSString *sTag   = kExternalPrivateKeyTag;
         
-        if (!aTag)
-        {
-            aTag = kExternalPrivateKeyTag;
-        }
-        
-        status = [[self class] SecItemAddPrivateKey:aExternalPrivateKey tag:aTag];
+        status = [[self class] SecItemAddPrivateKey:aExternalPrivateKey tag:sTag];
         if ((status != errSecSuccess) && (status != errSecDuplicateItem)) {
             sSecKeyRef = NULL;
         }
     
-        status = [[self class] secKeyRef:&sSecKeyRef tag:aTag];
+        status = [[self class] secKeyRef:&sSecKeyRef tag:sTag];
         if(status != errSecSuccess){
             sSecKeyRef = NULL;
         }
         
-        status = [[self class] SecItemDeleteByTag:aTag];
+        status = [[self class] SecItemDeleteByTag:sTag];
     }
     
     return sSecKeyRef;
