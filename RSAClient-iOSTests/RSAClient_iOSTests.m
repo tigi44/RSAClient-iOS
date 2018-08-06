@@ -35,7 +35,8 @@ static NSString * const kEmbededTestServerPrivateKeyString = @"MIIEvAIBADANBgkqh
     [super tearDown];
 }
 
-- (void)testSendRequestForGeneratingKey {
+- (void)testSendRequestForGeneratingKey
+{
     NSString *description = [NSString stringWithFormat:@"%s", __FUNCTION__];
     XCTestExpectation *expectation = [self expectationWithDescription:description];
     
@@ -58,7 +59,8 @@ static NSString * const kEmbededTestServerPrivateKeyString = @"MIIEvAIBADANBgkqh
     }];
 }
 
-- (void)testRSAByEmbededServerKeys {
+- (void)testRSAByEmbededServerKeys
+{
     NSString *sEncryptedString = [RSAManager encryptString:kPlainText publicKey:kEmbededTestServerPublicKeyString tag:nil];
     NSLog(@"Enctypted with public key : %@", sEncryptedString);
     XCTAssertNotNil(sEncryptedString, @"sEncryptedString must be not nil");
@@ -121,7 +123,8 @@ static NSString * const kEmbededTestServerPrivateKeyString = @"MIIEvAIBADANBgkqh
     }];
 }
 
-- (void)testRSAByGeneratediOSKeys {
+- (void)testRSAByGeneratediOSKeys
+{
 //    [RSAManager removeAllRSAKeys];
     [RSAManager generateKeyPair];
 
@@ -142,7 +145,7 @@ static NSString * const kEmbededTestServerPrivateKeyString = @"MIIEvAIBADANBgkqh
     NSString *description = [NSString stringWithFormat:@"%s", __FUNCTION__];
     XCTestExpectation *expectation = [self expectationWithDescription:description];
     
-    NSString *siOSPublicKeyString = [RSAManager iOSPublicKeyStringForServer];
+    NSString *siOSPublicKeyString = [RSAManager iOSPublicKeyString];
     XCTAssertNotNil(siOSPublicKeyString, @"siOSPublicKeyString must be not nil");
     NSLog(@"-----BEGIN PUBLIC KEY for SERVER-----");
     NSLog(@"%@", siOSPublicKeyString);

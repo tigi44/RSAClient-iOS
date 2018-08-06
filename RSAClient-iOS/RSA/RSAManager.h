@@ -19,28 +19,28 @@
 
 + (void)removeAllRSAKeys;
 
-+ (NSString *)iOSPublicKeyStringForServerByTag:(nonnull NSString *)aPublicKeyTag;
-+ (NSString *)iOSPublicKeyStringForServer;
++ (NSString *)publicKeyStringByTag:(nonnull NSString *)aPublicKeyTag;
++ (NSString *)iOSPublicKeyString;
 
 
 #pragma mark - External publicKey/privateKey
 
 
-+ (NSString *)encryptString:(nonnull NSString *)aPlanString publicKey:(nonnull NSString *)aPublicKeyString tag:(nullable NSString *)aTag;
-+ (NSString *)decryptString:(nonnull NSString *)aEncryptedString privateKey:(nonnull NSString *)aPrivateKeyString tag:(nullable NSString *)aTag;
++ (NSString *)encryptString:(nonnull NSString *)aPlanString publicKey:(nonnull NSString *)aPublicKeyString tag:(nullable NSString *)aPublicKeyTag;
++ (NSString *)decryptString:(nonnull NSString *)aEncryptedString privateKey:(nonnull NSString *)aPrivateKeyString tag:(nullable NSString *)aPrivateKeyTag;
 
 
 #pragma mark - iOS publicKey Encrypt
 
 
-+ (NSString *)iOSKeyEncryptString:(nonnull NSString *)aPlanString tag:(nonnull NSString *)aPublicKeyTag;
++ (NSString *)encryptString:(nonnull NSString *)aPlanString tag:(nonnull NSString *)aPublicKeyTag;
 + (NSString *)iOSKeyEncryptString:(nonnull NSString *)aPlanString;
 
 
 #pragma mark - iOS privateKey Decrypt
 
 
-+ (NSString *)iOSKeyDecryptString:(nonnull NSString *)aEncryptedString tag:(nonnull NSString *)aPrivateKeyTag;
++ (NSString *)decryptString:(nonnull NSString *)aEncryptedString tag:(nonnull NSString *)aPrivateKeyTag;
 + (NSString *)iOSKeyDecryptString:(nonnull NSString *)aEncryptedString;
 
 @end
