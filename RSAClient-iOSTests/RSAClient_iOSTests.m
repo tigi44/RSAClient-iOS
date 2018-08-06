@@ -61,11 +61,11 @@ static NSString * const kEmbededTestServerPrivateKeyString = @"MIIEvAIBADANBgkqh
 
 - (void)testRSAByEmbededServerKeys
 {
-    NSString *sEncryptedString = [RSAManager encryptString:kPlainText publicKey:kEmbededTestServerPublicKeyString tag:nil];
+    NSString *sEncryptedString = [RSAManager encryptString:kPlainText publicKey:kEmbededTestServerPublicKeyString];
     NSLog(@"Enctypted with public key : %@", sEncryptedString);
     XCTAssertNotNil(sEncryptedString, @"sEncryptedString must be not nil");
 
-    NSString *sDecryptedString = [RSAManager decryptString:sEncryptedString privateKey:kEmbededTestServerPrivateKeyString tag:nil];
+    NSString *sDecryptedString = [RSAManager decryptString:sEncryptedString privateKey:kEmbededTestServerPrivateKeyString];
     NSLog(@"******** Decrypted with private key : %@ ********", sDecryptedString);
     XCTAssertNotNil(sDecryptedString, @"sDecryptedString must be not nil");
     XCTAssert([sDecryptedString isEqualToString:kPlainText], @"sDecryptedString must be equaled with sPlanText");
@@ -88,7 +88,7 @@ static NSString * const kEmbededTestServerPrivateKeyString = @"MIIEvAIBADANBgkqh
         NSLog(@"-----END PUBLIC KEY-----");
         
         // encrypt on iOS
-        NSString *sEncryptedString = [RSAManager encryptString:kPlainText publicKey:sPublicKeyString tag:nil];
+        NSString *sEncryptedString = [RSAManager encryptString:kPlainText publicKey:sPublicKeyString];
         NSLog(@"Enctypted with public key : %@", sEncryptedString);
         XCTAssertNotNil(sEncryptedString, @"sEncryptedString must be not nil");
         
