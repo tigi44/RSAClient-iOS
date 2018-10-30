@@ -1,4 +1,7 @@
 language: objective-c
+xcode_project: RSAClient-iOS.xcodeproj
+xcode_scheme: RSAClient-iOS
+xcode_destination: platform=iOS Simulator,OS=11.3,name=iPhone X
 branches:
   only:
     - master
