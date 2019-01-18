@@ -346,8 +346,12 @@ static int       const kRSAKeySize               = 2048;
     NSData              *sPublicTag       = [aPublicKeyTag  dataUsingEncoding:NSUTF8StringEncoding];
     NSData              *sPrivateTag      = [aPrivateKeyTag dataUsingEncoding:NSUTF8StringEncoding];
     
-    [sPublicKeyAttrs  setObject:sPublicTag             forKey:(id)kSecAttrApplicationTag];
-    [sPrivateKeyAttrs setObject:sPrivateTag            forKey:(id)kSecAttrApplicationTag];
+    [sPublicKeyAttrs  setObject:@(YES)                       forKey:(id)kSecAttrIsPermanent];
+    [sPublicKeyAttrs  setObject:sPublicTag                   forKey:(id)kSecAttrApplicationTag];
+    [sPublicKeyAttrs  setObject:(id)kSecAttrAccessibleAlways forKey:(id)kSecAttrAccessible];
+    [sPrivateKeyAttrs setObject:@(YES)                       forKey:(id)kSecAttrIsPermanent];
+    [sPrivateKeyAttrs setObject:sPrivateTag                  forKey:(id)kSecAttrApplicationTag];
+    [sPrivateKeyAttrs setObject:(id)kSecAttrAccessibleAlways forKey:(id)kSecAttrAccessible];
     
     [sKeyPairAttrs    setObject:(id)kSecAttrKeyTypeRSA forKey:(id)kSecAttrKeyType];
     [sKeyPairAttrs    setObject:@(kRSAKeySize)         forKey:(id)kSecAttrKeySizeInBits];
