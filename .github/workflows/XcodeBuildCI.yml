@@ -19,7 +19,7 @@ jobs:
         xcode-version: '12.3.0'
     - name: Build
       run: |
-        xcodebuild clean build -project RSAClient-iOS.xcodeproj -scheme RSAClient-iOS -destination 'platform=iOS Simulator,OS=14.3,name=iPhone X'
+        xcodebuild clean build -project RSAClient-iOS.xcodeproj -scheme RSAClient-iOS -destination 'platform=iOS Simulator,OS=14.3,name=iPhone 12 Pro Max'
     - name: Run Tests
       run: |
-        xcodebuild clean test -project RSAClient-iOS.xcodeproj -scheme RSAClient-iOS -destination 'platform=iOS Simulator,OS=14.3,name=iPhone X'
+        xcodebuild clean test -project RSAClient-iOS.xcodeproj -scheme RSAClient-iOS -destination 'platform=iOS Simulator,OS=14.3,name=iPhone 12 Pro Max'
